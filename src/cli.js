@@ -1,4 +1,3 @@
-
 import { parseArgs } from 'node:util';
 
 import {
@@ -127,36 +126,5 @@ export async function runCLI(args = process.argv.slice(2)) {
 
 function showHelp() {
     console.log(`
-========================================
-             DEVTRACK CLI
-      Developer Productivity Toolkit
-========================================
-
-PROJECT COMMANDS
-  project add "Project Name"
-  project list
-  project show "Project Name"
-  project remove "Project Name"
-
-TASK COMMANDS
-  task add "Task Name" --project "Project Name"
-  task list
-  task update "Task Name" --status completed
-  task remove "Task Name"
-
-GITHUB
-  repo inspect owner/repository
-
-PRODUCTIVITY
-  dashboard
-  report
-
-OPTIONS
-  -h, --help
-  -p, --priority
-  -s, --status
-  -d, --description
-  --due
-  --project
 `);
 }
