@@ -1,8 +1,8 @@
-# DevTrack-CLI
+# DevTrack CLI
 
 A Node.js command-line toolkit for managing developer projects, tasks, and GitHub repository insights.
 
-## Overview
+DevTrack CLI is a Node.js command-line application designed to help developers organize their projects, manage tasks, monitor productivity, and inspect GitHub repositories directly from the terminal.
 
 DevTrack CLI is a small productivity tool that runs in the terminal. It lets a developer keep a list of projects and tasks, mark tasks as done, see a dashboard and a report of their progress, and look up public GitHub repositories, all without leaving the command line.
 
@@ -63,7 +63,7 @@ npm start -- --help
 npm start -- dashboard
 ```
 
-### Uninstall
+You can then access DevTrack commands without navigating into the project directory.
 
 ```bash
 npm unlink -g devtrack-cli
