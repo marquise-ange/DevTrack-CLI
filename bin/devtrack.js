@@ -2,7 +2,6 @@
 
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
-
 import { runCLI } from '../src/cli.js';
 
 const rl = createInterface({
@@ -13,21 +12,27 @@ const rl = createInterface({
 function displayMenu() {
     console.clear();
 
-    console.log('========================================');
-    console.log('             DEVTRACK CLI');
-    console.log('      Developer Productivity Toolkit');
-    console.log('========================================');
+    console.log(`
+========================================
+             DEVTRACK CLI
+      Developer Productivity Toolkit
+========================================
 
-    console.log('\nMAIN MENU\n');
+MAIN MENU
 
-    console.log('  1. Project Management');
-    console.log('  2. Task Management');
-    console.log('  3. GitHub Repository');
-    console.log('  4. Dashboard');
-    console.log('  5. Reports');
-    console.log('  0. Exit');
+  1. Project Management
+  2. Task Management
+  3. GitHub Repository
+  4. Dashboard
+  5. Reports
+  0. Exit
 
-    console.log('\n========================================');
+========================================
+`);
+}
+
+async function pause() {
+    await rl.question('\nPress Enter to continue...');
 }
 
 async function projectMenu() {
@@ -36,19 +41,23 @@ async function projectMenu() {
     while (running) {
         console.clear();
 
-        console.log('\n========== PROJECT MANAGEMENT ==========\n');
-        console.log('  1. Add Project');
-        console.log('  2. List Projects');
-        console.log('  3. Show Project Details');
-        console.log('  4. Remove Project');
-        console.log('  0. Back to Main Menu');
+        console.log(`
+========== PROJECT MANAGEMENT ==========
 
-        const choice = (await rl.question('\nSelect an option: ')).trim();
+  1. Add Project
+  2. List Projects
+  3. Show Project
+  4. Update Project
+  5. Delete Project
+  0. Back
+`);
+
+        const choice = (await rl.question('Select an option: ')).trim();
 
         switch (choice) {
             case '1': {
-                const name = await rl.question('Enter project name: ');
-                await runCLI(['project', 'add', name.trim()]);
+                const name = await rl.question('Project name: ');
+                await runCLI(['project', 'add', name]);
                 break;
             }
 
@@ -57,61 +66,133 @@ async function projectMenu() {
                 break;
 
             case '3': {
-                const name = await rl.question('Enter project name: ');
-                await runCLI(['project', 'show', name.trim()]);
+                const name = await rl.question('Project name or ID: ');
+                await runCLI(['project', 'show', name]);
                 break;
             }
 
             case '4': {
-                const name = await rl.question('Enter project name: ');
-                await runCLI(['project', 'remove', name.trim()]);
+                const identifier = await rl.question('Project name or ID: ');
+                const name = await rl.question('New name (Enter to keep): ');
+                const description = await rl.question('New description: ');
+
+                await runCLI([
+                    'project', 'update', identifier,
+                    ...(name ? ['--name', name] : []),
+                    '--description', description,
+                ]);
+                break;
+            }
+
+            case '5': {
+                const name = await rl.question('Project name or ID: ');
+                await runCLI(['project', 'remove', name]);
                 break;
             }
 
             case '0':
                 running = false;
-                continue;
+                break;
 
             default:
-                console.log('\nInvalid option.');
+                console.log('Invalid option.');
         }
 
-        if (running) {
-            await rl.question('\nPress Enter to continue...');
+        if (running) await pause();
+    }
+}
+
+async function taskMenu() {
+    let running = true;
+
+    while (running) {
+        console.clear();
+
+        console.log(`
+========== TASK MANAGEMENT ==========
+
+  1. Create Task
+  2. List Tasks
+  3. Update Task
+  4. Delete Task
+  0. Back
+`);
+
+        const choice = (await rl.question('Select an option: ')).trim();
+
+        switch (choice) {
+            case '1': {
+                const title = await rl.question('Task title: ');
+                const project = await rl.question('Project name or ID: ');
+                const priority = await rl.question('Priority (low/medium/high): ');
+                const due = await rl.question('Due date (YYYY-MM-DD, optional): ');
+
+                await runCLI([
+                    'task', 'add', title,
+                    '--project', project,
+                    '--priority', priority || 'medium',
+                    '--due', due,
+                ]);
+                break;
+            }
+
+            case '2': {
+                const project = await rl.question('Filter by project (Enter for all): ');
+
+                await runCLI([
+                    'task', 'list',
+                    ...(project ? ['--project', project] : []),
+                ]);
+                break;
+            }
+
+            case '3': {
+                const identifier = await rl.question('Task title or ID: ');
+                const status = await rl.question('New status (todo/in-progress/completed): ');
+
+                await runCLI([
+                    'task', 'update', identifier,
+                    '--status', status,
+                ]);
+                break;
+            }
+
+            case '4': {
+                const identifier = await rl.question('Task title or ID: ');
+                await runCLI(['task', 'remove', identifier]);
+                break;
+            }
+
+            case '0':
+                running = false;
+                break;
+
+            default:
+                console.log('Invalid option.');
         }
+
+        if (running) await pause();
     }
 }
 
 async function repositoryMenu() {
-    console.clear();
+    const repository = await rl.question('Repository (owner/repo): ');
 
-    console.log('\n========== GITHUB REPOSITORY ==========\n');
-    console.log('  1. Inspect Repository');
-    console.log('  0. Back to Main Menu');
-
-    const choice = (await rl.question('\nSelect an option: ')).trim();
-
-    if (choice === '1') {
-        const repository = await rl.question(
-            '\nEnter repository (owner/repo): '
-        );
-
+    if (repository.trim()) {
         await runCLI(['repo', 'inspect', repository.trim()]);
-        await rl.question('\nPress Enter to continue...');
-    } else if (choice !== '0') {
-        console.log('\nInvalid option.');
-        await rl.question('\nPress Enter to continue...');
     }
+
+    await pause();
 }
 
 async function startMenu() {
-    let running = true;
-
     try {
+        let running = true;
+
         while (running) {
             displayMenu();
 
-            const choice = (await rl.question('\nSelect an option: ')).trim();
+            const choice = (await rl.question('Select an option: ')).trim();
 
             switch (choice) {
                 case '1':
@@ -119,8 +200,7 @@ async function startMenu() {
                     break;
 
                 case '2':
-                    console.log('\nTask Management is coming soon.');
-                    await rl.question('\nPress Enter to continue...');
+                    await taskMenu();
                     break;
 
                 case '3':
@@ -128,13 +208,13 @@ async function startMenu() {
                     break;
 
                 case '4':
-                    console.log('\nDashboard is coming soon.');
-                    await rl.question('\nPress Enter to continue...');
+                    await runCLI(['dashboard']);
+                    await pause();
                     break;
 
                 case '5':
-                    console.log('\nReports are coming soon.');
-                    await rl.question('\nPress Enter to continue...');
+                    await runCLI(['report']);
+                    await pause();
                     break;
 
                 case '0':
@@ -143,8 +223,8 @@ async function startMenu() {
                     break;
 
                 default:
-                    console.log('\nInvalid option. Please try again.');
-                    await rl.question('\nPress Enter to continue...');
+                    console.log('\nInvalid option.');
+                    await pause();
             }
         }
     } finally {
@@ -152,7 +232,7 @@ async function startMenu() {
     }
 }
 
-startMenu().catch((error) => {
-    console.error('\nUnexpected error:', error.message);
+startMenu().catch(error => {
+    console.error('Unexpected error:', error.message);
     process.exitCode = 1;
 });
