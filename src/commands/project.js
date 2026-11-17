@@ -1,109 +1,146 @@
 
 import { readData, writeData } from '../storage/dataStore.js';
+import { validateName } from '../utils/validators.js';
 
 export async function addProject(name) {
-    if (!name) {
-        console.error('Error: Please provide a project name.');
-        process.exitCode = 1;
+    name = name?.trim();
+
+    if (!validateName(name)) {
+        console.log('Error: Project name must contain at least 2 characters.');
         return;
     }
 
     const data = await readData();
 
-    const existingProject = data.projects.find(
-        project => project.name.toLowerCase() === name.toLowerCase()
-    );
-
-    if (existingProject) {
-        console.error(`Error: "${name}" already exists.`);
-        process.exitCode = 1;
+    if (data.projects.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+        console.log('Error: This project already exists.');
         return;
     }
 
-    const newProject = {
+    const project = {
         id: Date.now(),
         name,
+        description: '',
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
     };
 
-    data.projects.push(newProject);
-
+    data.projects.push(project);
     await writeData(data);
 
-    console.log(`Project "${name}" added successfully!`);
+    console.log(`Project "${name}" created successfully!`);
 }
 
 export async function listProjects() {
     const data = await readData();
 
-    if (data.projects.length === 0) {
-        console.log('No projects found. Add your first project!');
+    if (!data.projects.length) {
+        console.log('No projects found.');
         return;
     }
 
-    console.log('\nYour Projects:\n');
+    console.log('\n========== YOUR PROJECTS ==========\n');
 
     data.projects.forEach((project, index) => {
+        const tasks = data.tasks.filter(t => t.projectId === project.id);
+        const completed = tasks.filter(t => t.status === 'completed').length;
+
         console.log(`${index + 1}. ${project.name}`);
+        console.log(`   Tasks: ${completed}/${tasks.length} completed`);
+        console.log(`   ID: ${project.id}\n`);
     });
 }
 
-
-
-export async function showProject(name) {
-    if (!name) {
-        console.error('Error: Please provide a project name.');
-        process.exitCode = 1;
-        return;
-    }
-
+export async function showProject(identifier) {
     const data = await readData();
 
-    const project = data.projects.find(
-        project => project.name.toLowerCase() === name.toLowerCase()
+    const project = data.projects.find(p =>
+        p.name.toLowerCase() === String(identifier).toLowerCase() ||
+        String(p.id) === String(identifier)
     );
 
     if (!project) {
-        console.error(`Error: Project "${name}" was not found.`);
-        process.exitCode = 1;
+        console.log('Project not found.');
         return;
     }
 
-    console.log('\nProject Details\n');
+    const tasks = data.tasks.filter(t => t.projectId === project.id);
+
+    console.log('\n========== PROJECT DETAILS ==========');
     console.log(`Name: ${project.name}`);
-    console.log(`ID: ${project.id}`);
-    console.log(
-        `Created: ${project.createdAt
-            ? new Date(project.createdAt).toLocaleString()
-            : 'Not available'}`
-    );
+    console.log(`Description: ${project.description || 'No description'}`);
+    console.log(`Created: ${new Date(project.createdAt).toLocaleString()}`);
+    console.log(`Total tasks: ${tasks.length}`);
+    console.log(`Completed: ${tasks.filter(t => t.status === 'completed').length}`);
 }
 
-
-export async function removeProject(name) {
-    if (!name) {
-        console.error('Error: Please provide a project name.');
-        process.exitCode = 1;
-        return;
-    }
-
+export async function updateProject(identifier, newName, description = '') {
     const data = await readData();
 
-    const projectIndex = data.projects.findIndex(
-        project => project.name.toLowerCase() === name.toLowerCase()
+    const project = data.projects.find(p =>
+        p.name.toLowerCase() === String(identifier).toLowerCase() ||
+        String(p.id) === String(identifier)
     );
 
-    if (projectIndex === -1) {
-        console.error(`Error: Project "${name}" was not found.`);
-        process.exitCode = 1;
+    if (!project) {
+        console.log('Project not found.');
         return;
     }
 
-    const removedProject = data.projects[projectIndex];
+    if (newName?.trim()) {
+        if (!validateName(newName.trim())) {
+            console.log('Project name must contain at least 2 characters.');
+            return;
+        }
 
-    data.projects.splice(projectIndex, 1);
+        const duplicate = data.projects.some(p =>
+            p.id !== project.id &&
+            p.name.toLowerCase() === newName.trim().toLowerCase()
+        );
+
+        if (duplicate) {
+            console.log('Another project already uses that name.');
+            return;
+        }
+
+        project.name = newName.trim();
+    }
+
+    if (description !== undefined) {
+        project.description = description.trim();
+    }
+
+    project.updatedAt = new Date().toISOString();
 
     await writeData(data);
+    console.log('Project updated successfully!');
+}
 
-    console.log(`Project "${removedProject.name}" removed successfully!`);
+export async function removeProject(identifier) {
+    const data = await readData();
+
+    const index = data.projects.findIndex(p =>
+        p.name.toLowerCase() === String(identifier).toLowerCase() ||
+        String(p.id) === String(identifier)
+    );
+
+    if (index === -1) {
+        console.log('Project not found.');
+        return;
+    }
+
+    const project = data.projects[index];
+
+    const linkedTasks = data.tasks.filter(t => t.projectId === project.id);
+
+    if (linkedTasks.length) {
+        console.log(`Cannot delete "${project.name}": it has ${linkedTasks.length} linked tasks.`);
+        console.log('Delete or reassign those tasks first.');
+        return;
+    }
+
+    data.projects.splice(index, 1);
+    await writeData(data);
+
+    console.log(`Project "${project.name}" deleted successfully.`);
 }
