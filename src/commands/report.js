@@ -1,54 +1,57 @@
+
 import { readData } from '../storage/dataStore.js';
-import { calculateStats, progressBar } from '../services/stats.js';
-import { title, info, displayTable } from '../utils/formatter.js';
+import { writeFile, mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
 
-export async function showReport() {
+export async function generateReport() {
     const data = await readData();
-    const stats = calculateStats(data);
 
-    title('DevTrack Productivity Report');
+    const completed = data.tasks.filter(t => t.status === 'completed');
+    const pending = data.tasks.filter(t => t.status !== 'completed');
 
-    // Projects section
-    console.log('Projects');
-
-    if (data.projects.length === 0) {
-        info('No projects yet.');
-    } else {
-        displayTable(
-            ['#', 'Project', 'Created'],
-            data.projects.map((project, index) => [
-                String(index + 1),
-                project.name,
-                project.createdAt
-                    ? new Date(project.createdAt).toLocaleDateString()
-                    : 'N/A',
-            ])
-        );
-    }
-
-    // Tasks section
-    console.log('\nTasks');
-
-    if (data.tasks.length === 0) {
-        info('No tasks yet.');
-    } else {
-        displayTable(
-            ['#', 'Task', 'Status'],
-            data.tasks.map((task, index) => [
-                String(index + 1),
-                task.title,
-                task.completed ? 'Completed' : 'Pending',
-            ])
-        );
-    }
-
-    // Summary section
-    console.log('\nSummary');
-    console.log(`Projects: ${stats.totalProjects}`);
-    console.log(
-        `Tasks: ${stats.completedTasks} completed, ${stats.pendingTasks} pending (of ${stats.totalTasks})`
+    const overdue = pending.filter(t =>
+        t.dueDate &&
+        t.dueDate < new Date().toISOString().slice(0, 10)
     );
-    console.log(
-        `Progress: ${progressBar(stats.taskProgress)} ${stats.taskProgress}%\n`
+
+    const report = {
+        generatedAt: new Date().toISOString(),
+        summary: {
+            totalProjects: data.projects.length,
+            totalTasks: data.tasks.length,
+            completedTasks: completed.length,
+            pendingTasks: pending.length,
+            overdueTasks: overdue.length,
+        },
+        projects: data.projects.map(project => ({
+            id: project.id,
+            name: project.name,
+            tasks: data.tasks.filter(t => t.projectId === project.id).length,
+            completed: data.tasks.filter(
+                t => t.projectId === project.id && t.status === 'completed'
+            ).length,
+        })),
+        tasks: data.tasks,
+    };
+
+    const directory = join(homedir(), '.devtrack', 'reports');
+
+    await mkdir(directory, { recursive: true });
+
+    const filename = `report-${Date.now()}.json`;
+
+    await writeFile(
+        join(directory, filename),
+        JSON.stringify(report, null, 2),
+        'utf8'
     );
+
+    console.log('\n========== PRODUCTIVITY REPORT ==========\n');
+    console.log(`Projects: ${report.summary.totalProjects}`);
+    console.log(`Total Tasks: ${report.summary.totalTasks}`);
+    console.log(`Completed: ${report.summary.completedTasks}`);
+    console.log(`Pending: ${report.summary.pendingTasks}`);
+    console.log(`Overdue: ${report.summary.overdueTasks}`);
+    console.log(`\nReport saved to: ${join(directory, filename)}`);
 }

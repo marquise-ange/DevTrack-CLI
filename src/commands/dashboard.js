@@ -1,30 +1,42 @@
+
 import { readData } from '../storage/dataStore.js';
-import { calculateStats, progressBar } from '../services/stats.js';
-import { title, info, displayTable } from '../utils/formatter.js';
+import { formatPercentage } from '../utils/formatter.js';
 
 export async function showDashboard() {
     const data = await readData();
-    const stats = calculateStats(data);
 
-    title('DevTrack Dashboard');
+    const totalProjects = data.projects.length;
+    const totalTasks = data.tasks.length;
 
-    // Handle empty data without errors
-    if (stats.totalProjects === 0 && stats.totalTasks === 0) {
-        info('No data yet. Add a project or a task to see your dashboard.');
-        return;
-    }
+    const completed = data.tasks.filter(t => t.status === 'completed').length;
+    const inProgress = data.tasks.filter(t => t.status === 'in-progress').length;
+    const todo = data.tasks.filter(t => t.status === 'todo').length;
 
-    displayTable(
-        ['Metric', 'Value'],
-        [
-            ['Total projects', String(stats.totalProjects)],
-            ['Total tasks', String(stats.totalTasks)],
-            ['Completed tasks', String(stats.completedTasks)],
-            ['Pending tasks', String(stats.pendingTasks)],
-        ]
-    );
+    const high = data.tasks.filter(t => t.priority === 'high').length;
+    const medium = data.tasks.filter(t => t.priority === 'medium').length;
+    const low = data.tasks.filter(t => t.priority === 'low').length;
 
-    console.log(
-        `\nTask progress: ${progressBar(stats.taskProgress)} ${stats.taskProgress}%\n`
-    );
+    const overdue = data.tasks.filter(t =>
+        t.status !== 'completed' &&
+        t.dueDate &&
+        t.dueDate < new Date().toISOString().slice(0, 10)
+    ).length;
+
+    console.log('\n========== DEVTRACK DASHBOARD ==========\n');
+
+    console.log(`Total Projects:       ${totalProjects}`);
+    console.log(`Total Tasks:          ${totalTasks}`);
+
+    console.log('\nTASK PROGRESS');
+    console.log(`Completed:            ${completed}`);
+    console.log(`In Progress:          ${inProgress}`);
+    console.log(`To Do:                ${todo}`);
+    console.log(`Completion Rate:      ${formatPercentage(completed, totalTasks)}`);
+
+    console.log('\nTASK PRIORITIES');
+    console.log(`High:                 ${high}`);
+    console.log(`Medium:               ${medium}`);
+    console.log(`Low:                  ${low}`);
+
+    console.log(`\nOverdue Tasks:        ${overdue}`);
 }

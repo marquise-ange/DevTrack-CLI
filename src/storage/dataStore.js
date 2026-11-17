@@ -1,53 +1,53 @@
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { homedir } from 'node:os';
-import path from 'node:path';
 
-// Find the user's home directory
-const dataDirectory = path.join(homedir(), '.devtrack');
+const DATA_DIRECTORY = join(homedir(), '.devtrack');
+const DATA_FILE = join(DATA_DIRECTORY, 'data.json');
 
-// Define where our JSON file will live
-const dataFile = path.join(dataDirectory, 'data.json');
-
-// Default structure for DevTrack data
-const defaultData = {
+const initialData = {
     projects: [],
     tasks: [],
 };
 
-// Make sure the storage file exists
-async function ensureDataFile() {
-    await mkdir(dataDirectory, { recursive: true });
+export async function readData() {
+    await mkdir(DATA_DIRECTORY, { recursive: true });
 
     try {
-        await readFile(dataFile, 'utf-8');
+        const content = await readFile(DATA_FILE, 'utf8');
+        const data = JSON.parse(content);
+
+        if (!Array.isArray(data.projects) || !Array.isArray(data.tasks)) {
+            throw new Error('Invalid DevTrack data structure.');
+        }
+
+        return data;
     } catch (error) {
         if (error.code !== 'ENOENT') {
             throw error;
         }
 
-        await writeFile(
-            dataFile,
-            JSON.stringify(defaultData, null, 2),
-            'utf-8'
-        );
+        await writeData(initialData);
+        return structuredClone(initialData);
     }
 }
 
-// Read saved information
-export async function readData() {
-    await ensureDataFile();
+export async function writeData(data) {
+    await mkdir(DATA_DIRECTORY, { recursive: true });
 
-    const content = await readFile(dataFile, 'utf-8');
+    const temporaryFile = `${DATA_FILE}.tmp`;
 
-    return JSON.parse(content);
+    await writeFile(
+        temporaryFile,
+        JSON.stringify(data, null, 2),
+        'utf8'
+    );
+
+    const { rename } = await import('node:fs/promises');
+    await rename(temporaryFile, DATA_FILE);
 }
 
-// Save information
-export async function writeData(data) {
-    await ensureDataFile();
-
-    const content = JSON.stringify(data, null, 2);
-
-    await writeFile(dataFile, content, 'utf-8');
+export async function getDataFilePath() {
+    return DATA_FILE;
 }

@@ -1,42 +1,20 @@
-import chalk from 'chalk';
-import Table from 'cli-table3';
 
-// Success message
-export function success(message) {
-    console.log(chalk.green(`✔ ${message}`));
+export function formatHeading(title) {
+    console.log('\n========================================');
+    console.log(`  ${title.toUpperCase()}`);
+    console.log('========================================\n');
 }
 
-// Error message
-export function error(message) {
-    console.log(chalk.red(`✖ ${message}`));
+export function formatPercentage(value, total) {
+    if (!total) return '0%';
+    return `${Math.round((value / total) * 100)}%`;
 }
 
-// Warning message
-export function warning(message) {
-    console.log(chalk.yellow(`⚠ ${message}`));
+export function formatDate(date) {
+    if (!date) return 'Not set';
+    return new Date(date).toLocaleDateString();
 }
 
-// Information message
-export function info(message) {
-    console.log(chalk.blue(`ℹ ${message}`));
-}
-
-// Display section title
-export function title(message) {
-    console.log(chalk.bold.cyan(`\n${message}\n`));
-}
-
-// Display data in a table
-export function displayTable(headers, rows) {
-    const table = new Table({
-        head: headers.map(header => chalk.cyan(header)),
-        style: {
-            head: [],
-            border: []
-        }
-    });
-
-    rows.forEach(row => table.push(row));
-
-    console.log(table.toString());
+export function formatStat(label, value) {
+    return `${label.padEnd(22)} ${value}`;
 }

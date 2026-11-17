@@ -1,30 +1,34 @@
 
 import { getRepository } from '../services/github.js';
 
-export async function inspectRepository(ownerAndRepo) {
-    // Validate the repository format
-    if (!ownerAndRepo || !/^[^/\s]+\/[^/\s]+$/.test(ownerAndRepo)) {
-        console.error('Error: Please provide a repository in owner/repo format.');
-        console.log('Example: devtrack repo inspect facebook/react');
-        process.exitCode = 1;
+export async function inspectRepository(identifier) {
+    if (!identifier || !identifier.includes('/')) {
+        console.log('Use this format: owner/repository');
+        return;
+    }
+
+    const [owner, repository] = identifier.split('/');
+
+    if (!owner || !repository || identifier.split('/').length !== 2) {
+        console.log('Invalid repository format.');
         return;
     }
 
     try {
-        const repository = await getRepository(ownerAndRepo);
+        const repo = await getRepository(owner, repository);
 
-        console.log('\nGitHub Repository Details\n');
-
-        console.log(`Name: ${repository.name}`);
-        console.log(`Description: ${repository.description || 'No description available'}`);
-        console.log(`Language: ${repository.language || 'Not specified'}`);
-        console.log(`Stars: ${repository.stars.toLocaleString()}`);
-        console.log(`Forks: ${repository.forks.toLocaleString()}`);
-        console.log(`Open Issues: ${repository.openIssues.toLocaleString()}`);
-        console.log(`Last Updated: ${new Date(repository.lastUpdated).toLocaleString()}`);
-
+        console.log('\n========== GITHUB REPOSITORY ==========\n');
+        console.log(`Name: ${repo.full_name}`);
+        console.log(`Description: ${repo.description || 'No description'}`);
+        console.log(`Owner: ${repo.owner.login}`);
+        console.log(`Language: ${repo.language || 'Not specified'}`);
+        console.log(`Stars: ${repo.stargazers_count}`);
+        console.log(`Forks: ${repo.forks_count}`);
+        console.log(`Open Issues: ${repo.open_issues_count}`);
+        console.log(`Visibility: ${repo.visibility}`);
+        console.log(`URL: ${repo.html_url}`);
+        console.log(`Updated: ${new Date(repo.updated_at).toLocaleString()}`);
     } catch (error) {
-        console.error(`Error: ${error.message}`);
-        process.exitCode = 1;
+        console.log(`GitHub error: ${error.message}`);
     }
 }

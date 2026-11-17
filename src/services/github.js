@@ -1,22 +1,33 @@
 
-export async function getRepository(ownerAndRepo) {
-    const url = `https://api.github.com/repos/${ownerAndRepo}`;
+const GITHUB_API = 'https://api.github.com';
 
-    const response = await fetch(url);
+export async function getRepository(owner, repository) {
+    if (!owner || !repository) {
+        throw new Error('Provide owner and repository name.');
+    }
+
+    const response = await fetch(
+        `${GITHUB_API}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}`,
+        {
+            headers: {
+                Accept: 'application/vnd.github+json',
+                'User-Agent': 'DevTrack-CLI',
+            },
+            signal: AbortSignal.timeout(10000),
+        }
+    );
 
     if (!response.ok) {
+        if (response.status === 404) {
+            throw new Error('Repository not found.');
+        }
+
+        if (response.status === 403 || response.status === 429) {
+            throw new Error('GitHub API rate limit reached. Try again later.');
+        }
+
         throw new Error(`GitHub API error: ${response.status}`);
     }
 
-    const repository = await response.json();
-
-    return {
-        name: repository.full_name,
-        description: repository.description,
-        language: repository.language,
-        stars: repository.stargazers_count,
-        forks: repository.forks_count,
-        openIssues: repository.open_issues_count,
-        lastUpdated: repository.updated_at,
-    };
+    return response.json();
 }

@@ -1,97 +1,166 @@
-import { readData, writeData } from '../storage/dataStore.js';
 
-// Add a new task
-export async function addTask(title) {
-    if (!title) {
-        console.error('Error: Please provide a task title.');
-        process.exitCode = 1;
+import { readData, writeData } from '../storage/dataStore.js';
+import {
+    validateName,
+    validatePriority,
+    validateStatus,
+    validateDate,
+} from '../utils/validators.js';
+
+export async function addTask(title, projectIdentifier, priority = 'medium', dueDate = '') {
+    title = title?.trim();
+    priority = priority.toLowerCase();
+
+    if (!validateName(title)) {
+        console.log('Task title must contain at least 2 characters.');
+        return;
+    }
+
+    if (!validatePriority(priority)) {
+        console.log('Priority must be low, medium, or high.');
+        return;
+    }
+
+    if (!validateDate(dueDate)) {
+        console.log('Due date must use YYYY-MM-DD.');
         return;
     }
 
     const data = await readData();
 
-    const newTask = {
+    const project = data.projects.find(p =>
+        p.name.toLowerCase() === String(projectIdentifier).toLowerCase() ||
+        String(p.id) === String(projectIdentifier)
+    );
+
+    if (!project) {
+        console.log('Project not found. Create a project first.');
+        return;
+    }
+
+    const task = {
         id: Date.now(),
         title,
-        completed: false,
+        projectId: project.id,
+        priority,
+        status: 'todo',
+        dueDate,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
     };
 
-    data.tasks.push(newTask);
-
+    data.tasks.push(task);
     await writeData(data);
 
-    console.log(`Task "${title}" added successfully!`);
+    console.log(`Task "${title}" created successfully!`);
 }
 
-// Display all tasks
-export async function listTasks() {
+export async function listTasks(projectIdentifier) {
     const data = await readData();
 
-    if (data.tasks.length === 0) {
-        console.log('No tasks found. Add your first task!');
+    let tasks = data.tasks;
+
+    if (projectIdentifier) {
+        const project = data.projects.find(p =>
+            p.name.toLowerCase() === String(projectIdentifier).toLowerCase() ||
+            String(p.id) === String(projectIdentifier)
+        );
+
+        if (!project) {
+            console.log('Project not found.');
+            return;
+        }
+
+        tasks = tasks.filter(t => t.projectId === project.id);
+    }
+
+    if (!tasks.length) {
+        console.log('No tasks found.');
         return;
     }
 
-    console.log('\nYour Tasks:\n');
+    console.log('\n========== TASK LIST ==========\n');
 
-    data.tasks.forEach((task, index) => {
-        const status = task.completed ? 'Completed' : 'Pending';
+    tasks.forEach((task, index) => {
+        const project = data.projects.find(p => p.id === task.projectId);
 
-        console.log(`${index + 1}. ${task.title} - ${status}`);
+        console.log(`${index + 1}. ${task.title}`);
+        console.log(`   Project: ${project?.name || 'Unknown'}`);
+        console.log(`   Status: ${task.status}`);
+        console.log(`   Priority: ${task.priority}`);
+        console.log(`   Due: ${task.dueDate || 'Not set'}`);
+        console.log(`   ID: ${task.id}\n`);
     });
 }
 
-// Mark a task as completed
-export async function completeTask(taskId) {
-    if (!taskId || !Number.isInteger(Number(taskId)) || Number(taskId) < 1) {
-        console.error('Error: Please provide a valid task number.');
-        process.exitCode = 1;
-        return;
-    }
-
+export async function updateTask(identifier, updates = {}) {
     const data = await readData();
-    const taskIndex = Number(taskId) - 1;
-    const task = data.tasks[taskIndex];
+
+    const task = data.tasks.find(t =>
+        String(t.id) === String(identifier) ||
+        t.title.toLowerCase() === String(identifier).toLowerCase()
+    );
 
     if (!task) {
-        console.error(`Error: Task "${taskId}" was not found.`);
-        process.exitCode = 1;
+        console.log('Task not found.');
         return;
     }
 
-    if (task.completed) {
-        console.log(`Task "${task.title}" is already completed.`);
-        return;
+    if (updates.title !== undefined) {
+        if (!validateName(updates.title.trim())) {
+            console.log('Invalid task title.');
+            return;
+        }
+        task.title = updates.title.trim();
     }
 
-    task.completed = true;
+    if (updates.status !== undefined) {
+        const status = updates.status.toLowerCase();
+        if (!validateStatus(status)) {
+            console.log('Status must be todo, in-progress, or completed.');
+            return;
+        }
+        task.status = status;
+    }
+
+    if (updates.priority !== undefined) {
+        const priority = updates.priority.toLowerCase();
+        if (!validatePriority(priority)) {
+            console.log('Invalid priority.');
+            return;
+        }
+        task.priority = priority;
+    }
+
+    if (updates.dueDate !== undefined) {
+        if (!validateDate(updates.dueDate)) {
+            console.log('Invalid due date.');
+            return;
+        }
+        task.dueDate = updates.dueDate;
+    }
+
+    task.updatedAt = new Date().toISOString();
 
     await writeData(data);
-
-    console.log(`Task "${task.title}" marked as completed!`);
+    console.log('Task updated successfully!');
 }
 
-// Delete a task
-export async function deleteTask(taskId) {
-    if (!taskId || !Number.isInteger(Number(taskId)) || Number(taskId) < 1) {
-        console.error('Error: Please provide a valid task number.');
-        process.exitCode = 1;
-        return;
-    }
-
+export async function removeTask(identifier) {
     const data = await readData();
-    const taskIndex = Number(taskId) - 1;
 
-    if (!data.tasks[taskIndex]) {
-        console.error(`Error: Task "${taskId}" was not found.`);
-        process.exitCode = 1;
+    const index = data.tasks.findIndex(t =>
+        String(t.id) === String(identifier) ||
+        t.title.toLowerCase() === String(identifier).toLowerCase()
+    );
+
+    if (index === -1) {
+        console.log('Task not found.');
         return;
     }
 
-    const deletedTask = data.tasks.splice(taskIndex, 1)[0];
+    const removed = data.tasks.splice(index, 1)[0];
 
     await writeData(data);
-
-    console.log(`Task "${deletedTask.title}" deleted successfully!`);
+    console.log(`Task "${removed.title}" deleted successfully.`);
 }
