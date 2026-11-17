@@ -77,9 +77,12 @@ async function projectMenu() {
                 const description = await rl.question('New description: ');
 
                 await runCLI([
-                    'project', 'update', identifier,
+                    'project',
+                    'update',
+                    identifier,
                     ...(name ? ['--name', name] : []),
-                    '--description', description,
+                    '--description',
+                    description,
                 ]);
                 break;
             }
@@ -128,19 +131,26 @@ async function taskMenu() {
                 const due = await rl.question('Due date (YYYY-MM-DD, optional): ');
 
                 await runCLI([
-                    'task', 'add', title,
-                    '--project', project,
-                    '--priority', priority || 'medium',
-                    '--due', due,
+                    'task',
+                    'add',
+                    title,
+                    '--project',
+                    project,
+                    '--priority',
+                    priority || 'medium',
+                    ...(due.trim() ? ['--due', due] : []),
                 ]);
                 break;
             }
 
             case '2': {
-                const project = await rl.question('Filter by project (Enter for all): ');
+                const project = await rl.question(
+                    'Filter by project (Enter for all): '
+                );
 
                 await runCLI([
-                    'task', 'list',
+                    'task',
+                    'list',
                     ...(project ? ['--project', project] : []),
                 ]);
                 break;
@@ -148,11 +158,16 @@ async function taskMenu() {
 
             case '3': {
                 const identifier = await rl.question('Task title or ID: ');
-                const status = await rl.question('New status (todo/in-progress/completed): ');
+                const status = await rl.question(
+                    'New status (todo/in-progress/completed): '
+                );
 
                 await runCLI([
-                    'task', 'update', identifier,
-                    '--status', status,
+                    'task',
+                    'update',
+                    identifier,
+                    '--status',
+                    status,
                 ]);
                 break;
             }
@@ -232,7 +247,19 @@ async function startMenu() {
     }
 }
 
-startMenu().catch(error => {
-    console.error('Unexpected error:', error.message);
-    process.exitCode = 1;
-});
+// Decide whether to launch a direct command or the interactive menu.
+const args = process.argv.slice(2);
+
+if (args.length > 0) {
+    runCLI(args)
+        .catch(error => {
+            console.error('Unexpected error:', error.message);
+            process.exitCode = 1;
+        })
+        .finally(() => rl.close());
+} else {
+    startMenu().catch(error => {
+        console.error('Unexpected error:', error.message);
+        process.exitCode = 1;
+    });
+}

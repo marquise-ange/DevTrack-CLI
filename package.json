@@ -8,7 +8,7 @@
     "devtrack": "./bin/devtrack.js"
   },
   "scripts": {
-    "start": "node bin/devtrack.js",
+    "start": "node init && node bin/devtrack.js",
     "test": "node --test"
   },
   "engines": {
