@@ -1,42 +1,95 @@
 
 import { readData } from '../storage/dataStore.js';
-import { formatPercentage } from '../utils/formatter.js';
+import {
+    formatPercentage,
+    formatHeading,
+    displayTable,
+    success,
+} from '../utils/formatter.js';
 
 export async function showDashboard() {
-    const data = await readData();
+    try {
+        const data = await readData();
 
-    const totalProjects = data.projects.length;
-    const totalTasks = data.tasks.length;
+        const totalProjects = data.projects.length;
+        const totalTasks = data.tasks.length;
 
-    const completed = data.tasks.filter(t => t.status === 'completed').length;
-    const inProgress = data.tasks.filter(t => t.status === 'in-progress').length;
-    const todo = data.tasks.filter(t => t.status === 'todo').length;
+        const completed = data.tasks.filter(
+            task => task.status === 'completed'
+        ).length;
 
-    const high = data.tasks.filter(t => t.priority === 'high').length;
-    const medium = data.tasks.filter(t => t.priority === 'medium').length;
-    const low = data.tasks.filter(t => t.priority === 'low').length;
+        const inProgress = data.tasks.filter(
+            task => task.status === 'in-progress'
+        ).length;
 
-    const overdue = data.tasks.filter(t =>
-        t.status !== 'completed' &&
-        t.dueDate &&
-        t.dueDate < new Date().toISOString().slice(0, 10)
-    ).length;
+        const todo = data.tasks.filter(
+            task => task.status === 'todo'
+        ).length;
 
-    console.log('\n========== DEVTRACK DASHBOARD ==========\n');
+        const high = data.tasks.filter(
+            task => task.priority === 'high'
+        ).length;
 
-    console.log(`Total Projects:       ${totalProjects}`);
-    console.log(`Total Tasks:          ${totalTasks}`);
+        const medium = data.tasks.filter(
+            task => task.priority === 'medium'
+        ).length;
 
-    console.log('\nTASK PROGRESS');
-    console.log(`Completed:            ${completed}`);
-    console.log(`In Progress:          ${inProgress}`);
-    console.log(`To Do:                ${todo}`);
-    console.log(`Completion Rate:      ${formatPercentage(completed, totalTasks)}`);
+        const low = data.tasks.filter(
+            task => task.priority === 'low'
+        ).length;
 
-    console.log('\nTASK PRIORITIES');
-    console.log(`High:                 ${high}`);
-    console.log(`Medium:               ${medium}`);
-    console.log(`Low:                  ${low}`);
+        const today = new Date().toISOString().slice(0, 10);
 
-    console.log(`\nOverdue Tasks:        ${overdue}`);
+        const overdue = data.tasks.filter(task =>
+            task.status !== 'completed' &&
+            task.dueDate &&
+            task.dueDate < today
+        ).length;
+
+        formatHeading('DevTrack Dashboard');
+
+        displayTable(
+            ['OVERVIEW', 'TOTAL'],
+            [
+                ['Projects', totalProjects],
+                ['Tasks', totalTasks],
+            ]
+        );
+
+        console.log('\n');
+
+        displayTable(
+            ['TASK PROGRESS', 'COUNT'],
+            [
+                ['Completed', completed],
+                ['In Progress', inProgress],
+                ['To Do', todo],
+                ['Completion Rate', formatPercentage(completed, totalTasks)],
+            ]
+        );
+
+        console.log('\n');
+
+        displayTable(
+            ['TASK PRIORITIES', 'COUNT'],
+            [
+                ['High', high],
+                ['Medium', medium],
+                ['Low', low],
+            ]
+        );
+
+        console.log('\n');
+
+        displayTable(
+            ['OVERDUE TASKS', 'COUNT'],
+            [
+                ['Overdue', overdue],
+            ]
+        );
+
+        success('Dashboard loaded successfully!');
+    } catch (error) {
+        throw error;
+    }
 }
