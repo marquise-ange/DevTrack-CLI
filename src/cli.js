@@ -11,8 +11,10 @@ import {
 import { inspectRepository } from './commands/repo.js';
 
 // Main function that runs the CLI
-export async function runCLI() {
+// Accepts custom arguments or defaults to terminal arguments.
+export async function runCLI(args = process.argv.slice(2)) {
     const { values, positionals } = parseArgs({
+        args,
         options: {
             help: {
                 type: 'boolean',
@@ -23,24 +25,21 @@ export async function runCLI() {
         strict: false,
     });
 
-    // Display help instructions
     if (values.help || positionals[0] === 'help') {
         showHelp();
         return;
     }
 
-    // Extract command arguments
     const command = positionals[0];
     const action = positionals[1];
     const argument = positionals.slice(2).join(' ');
 
-    // Show help when no command is provided
     if (!command) {
         showHelp();
         return;
     }
 
-    // Project management commands
+    // Project management
     if (command === 'project') {
         switch (action) {
             case 'add':
@@ -67,7 +66,7 @@ export async function runCLI() {
         }
     }
 
-    // GitHub repository commands
+    // GitHub repository management
     if (command === 'repo') {
         if (action === 'inspect') {
             await inspectRepository(argument);
@@ -80,7 +79,7 @@ export async function runCLI() {
         return;
     }
 
-    // Commands that will be implemented later
+    // Features planned for future implementation
     const upcomingCommands = ['task', 'dashboard', 'report'];
 
     if (upcomingCommands.includes(command)) {
@@ -88,7 +87,6 @@ export async function runCLI() {
         return;
     }
 
-    // Handle unknown commands
     console.error(`Error: Unknown command "${command}".`);
     console.log('Run "devtrack --help" to see available commands.');
     process.exitCode = 1;
