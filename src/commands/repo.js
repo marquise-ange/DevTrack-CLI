@@ -1,21 +1,29 @@
 
+import ora from 'ora';
 import { getRepository } from '../services/github.js';
+import { success, errorMessage } from '../utils/formatter.js';
 
 export async function inspectRepository(identifier) {
     if (!identifier || !identifier.includes('/')) {
-        console.log('Use this format: owner/repository');
+        errorMessage('Use this format: owner/repository');
+        process.exitCode = 1;
         return;
     }
 
     const [owner, repository] = identifier.split('/');
 
     if (!owner || !repository || identifier.split('/').length !== 2) {
-        console.log('Invalid repository format.');
+        errorMessage('Invalid repository format.');
+        process.exitCode = 1;
         return;
     }
 
+    const spinner = ora('Fetching GitHub repository information...').start();
+
     try {
         const repo = await getRepository(owner, repository);
+
+        spinner.succeed('Repository information loaded successfully!');
 
         console.log('\n========== GITHUB REPOSITORY ==========\n');
         console.log(`Name: ${repo.full_name}`);
@@ -28,7 +36,10 @@ export async function inspectRepository(identifier) {
         console.log(`Visibility: ${repo.visibility}`);
         console.log(`URL: ${repo.html_url}`);
         console.log(`Updated: ${new Date(repo.updated_at).toLocaleString()}`);
+
     } catch (error) {
-        console.log(`GitHub error: ${error.message}`);
+        spinner.fail('Could not fetch repository information.');
+        errorMessage(error.message);
+        process.exitCode = 1;
     }
 }
